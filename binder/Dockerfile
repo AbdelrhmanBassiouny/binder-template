@@ -95,6 +95,21 @@ ENV ROS_DISTRO=${ROS_DISTRO}
 
 RUN pip install "setuptools<81"
 
+# ------------------------------------------------------------
+# Generate the ORM interfaces
+#
+# cognitive_robot_abstract_machine tracks every ormatic_interface.py as an empty
+# placeholder, so a fresh checkout can neither read from nor write to a database until
+# they are generated. Doing it here costs about a minute of build time instead of a
+# minute in the first notebook cell of every session. The entrypoint regenerates them
+# whenever it pulls new commits, so they never lag behind the code they map.
+# ------------------------------------------------------------
+RUN set -ex && \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    . /workspace/ros/install/setup.sh && \
+    cd ${HOME}/libs/cognitive_robot_abstract_machine && \
+    python3 scripts/regenerate_all_orm.py
+
 USER root
 # Copy content to the image
 ENV REPO_DIR=/home/repo
