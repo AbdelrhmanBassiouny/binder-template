@@ -20,6 +20,7 @@ RUN apt update && apt install -y --no-install-recommends \
     ros-jazzy-hardware-interface \
     ros-jazzy-controller-manager \
     ros-jazzy-control-msgs \
+    ros-jazzy-rclpy-message-converter \
     ros-jazzy-xacro \
     ros-jazzy-rqt-joint-trajectory-controller \
     python3-vcstool \
