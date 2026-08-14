@@ -37,7 +37,7 @@ RUN python3 -m pip install poetry
 RUN set -ex && \
     poetry config virtualenvs.create false && \
     mkdir -p ${HOME}/libs && cd ${HOME}/libs && \
-    git clone --branch icjai-tutorial --single-branch https://github.com/tomsch420/cognitive_robot_abstract_machine.git && \
+    git clone --branch ijcai-tutorial --single-branch https://github.com/AbdelrhmanBassiouny/cognitive_robot_abstract_machine.git && \
     cd cognitive_robot_abstract_machine && \
     git pull && \
     git clone https://github.com/sunava/pycram_object_gap_demo.git pycram/resources/pycram_object_gap_demo && \
