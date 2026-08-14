@@ -51,7 +51,22 @@ update_cognitive_architecture() {
     fi
 
     echo "Updating cognitive_robot_abstract_machine in ${repo_dir}" >&2
-    git -C "${repo_dir}" pull --ff-only >/tmp/cognitive-architecture-pull.log 2>&1 ||         echo "cognitive_robot_abstract_machine update failed; see /tmp/cognitive-architecture-pull.log" >&2
+    local revision_before
+    revision_before="$(git -C "${repo_dir}" rev-parse HEAD)"
+
+    if ! git -C "${repo_dir}" pull --ff-only >/tmp/cognitive-architecture-pull.log 2>&1; then
+        echo "cognitive_robot_abstract_machine update failed; see /tmp/cognitive-architecture-pull.log" >&2
+        return
+    fi
+
+    if [[ "$(git -C "${repo_dir}" rev-parse HEAD)" == "${revision_before}" ]]; then
+        return
+    fi
+
+    # The ORM interfaces generated into the image map the code as it was when the image
+    # was built, so the pulled code needs its own.
+    echo "Regenerating the ORM interfaces, this takes about a minute" >&2
+    (cd "${repo_dir}" && python3 scripts/regenerate_all_orm.py) >/tmp/cognitive-architecture-orm.log 2>&1 ||         echo "ORM interface generation failed; see /tmp/cognitive-architecture-orm.log" >&2
 }
 
 start_rviz() {

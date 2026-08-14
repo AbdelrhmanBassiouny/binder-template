@@ -31,6 +31,12 @@ RUN apt update && apt install -y --no-install-recommends \
 
 # ------------------------------------------------------------
 # Install demo repository and cram code
+#
+# cognitive_robot_abstract_machine sets "package-mode = false" for poetry, so
+# "poetry install" installs the workspace packages but not the meta-package itself.
+# The notebooks import it (cognitive_robot_abstract_machine.orm_interfaces), so it is
+# installed separately; its dependencies are the workspace packages poetry just
+# installed, hence --no-deps.
 # ------------------------------------------------------------
 
 RUN python3 -m pip install poetry
@@ -43,6 +49,7 @@ RUN set -ex && \
     git clone https://github.com/sunava/pycram_object_gap_demo.git pycram/resources/pycram_object_gap_demo && \
     sed -i '/^[[:space:]]*random_events[[:space:]]*=.*$/d' pyproject.toml && \
     poetry install && \
+    python3 -m pip install --no-deps -e . && \
     mkdir -p /workspace/ros/src && \
     cd /workspace/ros/src && \
     git clone -b ros-jazzy --single-branch https://github.com/code-iai/iai_maps.git && \
@@ -81,6 +88,21 @@ ENV ROS_DISTRO=${ROS_DISTRO}
 
 
 RUN pip install "setuptools<81"
+
+# ------------------------------------------------------------
+# Generate the ORM interfaces
+#
+# cognitive_robot_abstract_machine tracks every ormatic_interface.py as an empty
+# placeholder, so a fresh checkout can neither read from nor write to a database until
+# they are generated. Doing it here costs about a minute of build time instead of a
+# minute in the first notebook cell of every session. The entrypoint regenerates them
+# whenever it pulls new commits, so they never lag behind the code they map.
+# ------------------------------------------------------------
+RUN set -ex && \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    . /workspace/ros/install/setup.sh && \
+    cd ${HOME}/libs/cognitive_robot_abstract_machine && \
+    python3 scripts/regenerate_all_orm.py
 
 USER root
 # Copy content to the image
