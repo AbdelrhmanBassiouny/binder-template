@@ -58,15 +58,27 @@ Visualization Manager:
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
-      Name: MarkerArray
+      Name: World
       Namespaces:
         {}
       Topic:
         Depth: 5
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /semworld/viz_marker
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Sampled points
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /semworld/sampled_points
       Value: true
     - Class: rviz_default_plugins/InteractiveMarkers
       Enable Transparency: true
@@ -180,7 +192,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: map
+    Fixed Frame: iai_oven_area/world
     Frame Rate: 30
   Name: root
   Tools:
@@ -239,7 +251,7 @@ Visualization Manager:
       Name: Current View
       Near Clip Distance: 0.009999999776482582
       Pitch: 0.6147968769073486
-      Target Frame: demo_camera_target
+      Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
       Yaw: 3.3694169521331787
     Saved: ~
