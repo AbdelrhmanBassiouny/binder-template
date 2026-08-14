@@ -37,6 +37,11 @@ RUN apt update && apt install -y --no-install-recommends \
 # The notebooks import it (cognitive_robot_abstract_machine.orm_interfaces), so it is
 # installed separately; its dependencies are the workspace packages poetry just
 # installed, hence --no-deps.
+#
+# cram_ros2_packages carries json_msgs, which giskardpy's ROS 2 middleware imports.
+# Generating the ORM interface of the experiments package imports that middleware, so
+# without these messages the generation fails. Its other two packages are ROS nodes the
+# notebooks never start, so they are skipped.
 # ------------------------------------------------------------
 
 RUN python3 -m pip install poetry
@@ -72,10 +77,11 @@ RUN set -ex && \
     find /workspace/ros/src -type f -name package.xml -path '*/robotiq_driver/package.xml' -execdir touch COLCON_IGNORE \; && \
     git clone https://github.com/sunava/isr_testbed.git && \
     git clone https://github.com/ipa320/cob_simulation.git && \
+    git clone https://github.com/cram2/cram_ros2_packages.git && \
     cd /workspace/ros && \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     colcon build --symlink-install \
-      --packages-skip cob_gazebo_tools cob_gazebo_objects cob_gazebo_worlds cob_gazebo cob_bringup_sim cob_simulation && \
+      --packages-skip cob_gazebo_tools cob_gazebo_objects cob_gazebo_worlds cob_gazebo cob_bringup_sim cob_simulation giskardpy_ros robokudo_ros && \
     echo "source /workspace/ros/install/setup.bash" >> /root/.bashrc
 
 # ------------------------------------------------------------
@@ -88,21 +94,6 @@ ENV ROS_DISTRO=${ROS_DISTRO}
 
 
 RUN pip install "setuptools<81"
-
-# ------------------------------------------------------------
-# Generate the ORM interfaces
-#
-# cognitive_robot_abstract_machine tracks every ormatic_interface.py as an empty
-# placeholder, so a fresh checkout can neither read from nor write to a database until
-# they are generated. Doing it here costs about a minute of build time instead of a
-# minute in the first notebook cell of every session. The entrypoint regenerates them
-# whenever it pulls new commits, so they never lag behind the code they map.
-# ------------------------------------------------------------
-RUN set -ex && \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    . /workspace/ros/install/setup.sh && \
-    cd ${HOME}/libs/cognitive_robot_abstract_machine && \
-    python3 scripts/regenerate_all_orm.py
 
 USER root
 # Copy content to the image
