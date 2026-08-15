@@ -4,7 +4,10 @@ This Binder setup uses a notebook-native UI instead of passing `robot`, `action`
 
 ## What happens on startup
 
-- Binder opens `notebooks/demo.ipynb`
+- the JupyterLab extension leaves the simple interface, because the split layout is only
+  restored in the multiple document interface
+- the file browser is taken out of the sidebar and the sidebar is collapsed
+- Binder opens `notebooks/demo.ipynb` on the left and the desktop with RViz on the right
 - the JupyterLab extension auto-runs the first code cell
 - that cell calls `run_ui()` from `notebooks/demo_ui.py`
 - the user sees the selector UI directly inside the notebook
@@ -18,12 +21,18 @@ Available flags:
 - `autoRunUI=0` disables opening and auto-running `notebooks/demo.ipynb`
 - `autoOpenDesktop=0` disables opening the desktop split panel
 - `autoCollapseLeft=0` keeps the left sidebar open
+- `hideFileBrowser=0` keeps the file browser in the sidebar, if it is enabled at all
 
 Example:
 
 ```text
 ...?urlpath=lab/workspaces/new-workspace?autoRunUI=0&autoOpenDesktop=0&autoCollapseLeft=0
 ```
+
+The file browser is disabled for good in [binder/Dockerfile](binder/Dockerfile), so
+`hideFileBrowser=0` only brings it back in a setup that does not disable the
+`@jupyterlab/filebrowser-extension:widget` plugin. To get the file browser back on Binder,
+drop the `jupyter labextension disable` line from the Dockerfile.
 
 Accepted false-like values are:
 

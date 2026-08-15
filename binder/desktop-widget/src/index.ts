@@ -1,4 +1,5 @@
 import {
+  ILabShell,
   ILayoutRestorer,
   JupyterFrontEnd,
   JupyterFrontEndPlugin
@@ -13,6 +14,12 @@ import { Widget } from '@lumino/widgets';
 const COMMAND_ID = 'desktop-widget:open';
 const NAMESPACE = 'desktop-widget';
 const DEFAULT_NOTEBOOK = 'notebooks/demo.ipynb';
+const FILE_BROWSER_ID = 'filebrowser';
+
+// Leaving simple mode makes the shell restore the deferred main area layout in the
+// background, so the widgets opened at startup have to wait for it. There is no signal
+// for the end of that restoration, hence the fixed delay.
+const LAYOUT_RESTORE_DELAY_MS = 300;
 
 const startupFlag = (name: string, defaultValue = true): boolean => {
   const params = new URLSearchParams(window.location.search);
@@ -47,9 +54,10 @@ class DesktopContent extends Widget {
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'desktop-widget:plugin',
   autoStart: true,
-  requires: [ILayoutRestorer, IDocumentManager],
+  requires: [ILabShell, ILayoutRestorer, IDocumentManager],
   activate: (
     app: JupyterFrontEnd,
+    labShell: ILabShell,
     restorer: ILayoutRestorer,
     docManager: IDocumentManager
   ) => {
@@ -58,7 +66,38 @@ const plugin: JupyterFrontEndPlugin<void> = {
     });
     let widget: MainAreaWidget<DesktopContent> | null = null;
 
+    const wait = (milliseconds: number) =>
+      new Promise<void>(resolve => window.setTimeout(resolve, milliseconds));
+
+    // The workspace stores the notebook and the desktop side by side, but the shell
+    // ignores that layout while it runs in simple mode, which is why the split has to be
+    // restored by hand today.
+    const leaveSimpleMode = async () => {
+      if (labShell.mode === 'multiple-document') {
+        return;
+      }
+
+      labShell.mode = 'multiple-document';
+      await wait(LAYOUT_RESTORE_DELAY_MS);
+    };
+
+    // Detaching the widget takes its tab out of the sidebar without disposing it, so the
+    // extensions that work on the default file browser keep functioning.
+    const removeFileBrowser = () => {
+      for (const sideBarWidget of labShell.widgets('left')) {
+        if (sideBarWidget.id === FILE_BROWSER_ID) {
+          sideBarWidget.parent = null;
+        }
+      }
+    };
+
     const openWidget = async () => {
+      if (widget === null || widget.isDisposed) {
+        // The workspace restores a desktop widget of its own, and a second one would
+        // claim the same identifier.
+        widget = tracker.find(() => true) ?? null;
+      }
+
       if (widget === null || widget.isDisposed) {
         widget = new MainAreaWidget({ content: new DesktopContent() });
         widget.id = 'desktop-widget';
@@ -126,9 +165,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
       const autoRun = startupFlag('autoRunUI', true);
       const autoOpenDesktop = startupFlag('autoOpenDesktop', true);
       const autoCollapseLeft = startupFlag('autoCollapseLeft', true);
+      const hideFileBrowser = startupFlag('hideFileBrowser', true);
+
+      await leaveSimpleMode();
+
+      if (hideFileBrowser) {
+        removeFileBrowser();
+      }
 
       if (autoCollapseLeft) {
-        void app.commands.execute('application:toggle-left-area');
+        labShell.collapseLeft();
       }
 
       if (autoRun) {

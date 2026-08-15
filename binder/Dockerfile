@@ -132,6 +132,15 @@ RUN cd ${REPO_DIR}/binder/desktop-widget && \
     jupyter labextension install . --no-build && \
     jupyter lab build --minimize=False
 
+# ------------------------------------------------------------
+# Hide the file browser
+#
+# The desktop-widget extension opens the notebook and the desktop itself, so the file
+# browser only takes up room in the interface. Disabling the plugin that puts it in the
+# sidebar keeps the file browser commands other extensions rely on registered.
+# ------------------------------------------------------------
+RUN jupyter labextension disable --level=sys_prefix "@jupyterlab/filebrowser-extension:widget"
+
 # The entrypoint of the docker image
 COPY binder/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
