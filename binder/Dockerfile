@@ -117,6 +117,10 @@ RUN mkdir -p ${REPO_DIR}
 COPY . ${REPO_DIR}/
 RUN git config --global --add safe.directory ${REPO_DIR}
 
+# The tutorial notebook's support code, installed so `from tutorial.setup import *`
+# works no matter which working directory the kernel starts in.
+RUN python3 -m pip install --no-deps -e ${REPO_DIR}/notebooks
+
 # Set JupyterLab default directory
 WORKDIR ${REPO_DIR}
 

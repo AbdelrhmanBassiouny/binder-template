@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ijcai-tutorial"
+version = "0.1.0"
+description = "Support code of the IJCAI EQL tutorial notebook, so `from tutorial.setup import *` works from any working directory."
+requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = ["tutorial"]

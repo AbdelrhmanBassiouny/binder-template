@@ -29,9 +29,17 @@ To point the session at another notebook, change `TUTORIAL_NOTEBOOK` at the top 
 [new-workspace.jupyterlab-workspace](new-workspace.jupyterlab-workspace), which stores the
 layout the two panels are restored into.
 
-No cell is run for the reader. The first cell of the tutorial regenerates the ORM
+No cell is run for the reader. The first code cell of the tutorial imports
+[notebooks/tutorial/setup.py](notebooks/tutorial/setup.py), which regenerates the ORM
 interfaces when they are missing, which takes about a minute, so it is left for the reader
-to start along with the rest of the notebook.
+to start along with the rest of the notebook. The support code of the tutorial lives in
+[notebooks/tutorial/](notebooks/tutorial/), so the notebook itself stays free of setup
+clutter; solution cells carry the `solution` tag and start collapsed
+(`jupyter.source_hidden`), exercise stubs carry the `exercise` tag. Query results are
+pointed out in RViz with `highlight`/`clear_highlights` from
+[notebooks/tutorial/highlighting.py](notebooks/tutorial/highlighting.py), which publishes
+colored overlay markers on `/semworld/highlights`; [default.rviz](default.rviz) carries
+the matching display.
 
 ## The selector UI is no longer part of the startup
 
