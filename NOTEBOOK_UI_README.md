@@ -43,6 +43,27 @@ Accepted false-like values are:
 
 If the flag is missing, the default behavior stays enabled.
 
+## Editor hints in the notebook
+
+A plain notebook offers no completion until you press `Tab` and no documentation until you
+press `Shift+Tab`, which readers of a tutorial rarely discover. `jupyterlab-lsp` and
+`python-lsp-server` in [requirements.txt](requirements.txt) put a language server behind
+the notebook, and [binder/jupyterlab-overrides.json](binder/jupyterlab-overrides.json)
+turns its two hidden features on:
+
+- `continuousHinting` shows the completion popup while you type instead of on `Tab`
+- `autoActivate` on hover shows the documentation of a symbol without holding `Control`
+
+`waitForBusyKernel` is turned off so completions keep coming while a demo cell is still
+running.
+
+The overrides are merged into JupyterLab's own `overrides.json` in
+[binder/Dockerfile](binder/Dockerfile), so they are the defaults of a fresh session and a
+reader can still change any of them under `Settings -> Settings Editor -> Code Completion`.
+
+`python-lsp-server` is installed without its linter extras on purpose: the extras report
+style warnings on every cell, which is noise in a tutorial.
+
 ## Where to edit the UI
 
 - Main UI code: [notebooks/demo_ui.py](/home/hassouna/binder-template/notebooks/demo_ui.py:1)

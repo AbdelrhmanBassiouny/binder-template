@@ -1,5 +1,7 @@
 ipywidgets
 sidecar
+jupyterlab-lsp # completion, hover documentation and signature help in the notebook
+python-lsp-server # the language server jupyterlab-lsp talks to, without the linter extras
 matplotlib
 mujoco
 scipy

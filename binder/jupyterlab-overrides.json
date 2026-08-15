@@ -1,0 +1,9 @@
+{
+  "@jupyter-lsp/jupyterlab-lsp:completion": {
+    "continuousHinting": true,
+    "waitForBusyKernel": false
+  },
+  "@jupyter-lsp/jupyterlab-lsp:hover": {
+    "autoActivate": true
+  }
+}

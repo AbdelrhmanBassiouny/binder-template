@@ -35,7 +35,9 @@ https://binder.intel4coro.de/v2/gh/{USER}/{REPO}/{BRANCH}?urlpath={INTERFACE}/{P
 
 ### Quick Tips
 
-- **JupyterLab** is recommended for notebook development and interactive computing
+- **JupyterLab** is recommended for notebook development and interactive computing; it
+  completes code while you type and shows documentation on hover, see
+  [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
 - **VSCode** is better if you prefer a full-featured code editor with debugging
 
 ## Create a new VRB lab from this template

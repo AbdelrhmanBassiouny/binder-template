@@ -141,6 +141,33 @@ RUN cd ${REPO_DIR}/binder/desktop-widget && \
 # ------------------------------------------------------------
 RUN jupyter labextension disable --level=sys_prefix "@jupyterlab/filebrowser-extension:widget"
 
+# ------------------------------------------------------------
+# Turn the language server hints on by default
+#
+# jupyterlab-lsp ships with the completion popup and the hover documentation behind a
+# key press, which readers of a tutorial never find. The overrides make both appear on
+# their own, so the notebook offers the same hints an editor would.
+#
+# The base image may already carry an overrides.json, hence the merge instead of a copy.
+# ------------------------------------------------------------
+RUN python3 - <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+overrides_file = Path(sys.prefix) / "share/jupyter/lab/settings/overrides.json"
+overrides = json.loads(overrides_file.read_text()) if overrides_file.is_file() else {}
+
+repo_overrides = Path(os.environ["REPO_DIR"]) / "binder/jupyterlab-overrides.json"
+
+for plugin, settings in json.loads(repo_overrides.read_text()).items():
+    overrides.setdefault(plugin, {}).update(settings)
+
+overrides_file.parent.mkdir(parents=True, exist_ok=True)
+overrides_file.write_text(json.dumps(overrides, indent=2) + "\n")
+PY
+
 # The entrypoint of the docker image
 COPY binder/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
