@@ -81,6 +81,7 @@ from krrood.entity_query_language.backends import (
     ProbabilisticBackend,
     SQLAlchemyBackend,
 )
+from krrood.entity_query_language.explanation.explanation import explain_inference
 from krrood.entity_query_language.factories import *
 from krrood.entity_query_language.verbalization.pipeline import (
     VerbalizationPipeline,
@@ -113,13 +114,21 @@ from semantic_digital_twin.reasoning.world_reasoner import WorldReasoner
 from semantic_digital_twin.robots.pr2 import PR2
 from semantic_digital_twin.semantic_annotations.mixins import IsStorageSpace
 from semantic_digital_twin.semantic_annotations.semantic_annotations import (
+    Door,
+    Drawer,
     Fridge,
+    Handle,
     Milk,
     ShelfLayer,
 )
 from semantic_digital_twin.spatial_types import Point3, Quaternion
 from semantic_digital_twin.spatial_types.spatial_types import Pose
 from semantic_digital_twin.world import World
+from semantic_digital_twin.world_description.connections import (
+    FixedConnection,
+    PrismaticConnection,
+    RevoluteConnection,
+)
 from semantic_digital_twin.world_description.geometry import Color
 from semantic_digital_twin.world_description.graph_of_convex_sets.base import (
     translate_free_space_to_where_condition,

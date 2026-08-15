@@ -50,6 +50,17 @@ def bodies_of(queried: Any) -> Iterator[Body]:
     if entities is not None:
         yield from (entity for entity in entities if isinstance(entity, Body))
         return
+    root = getattr(queried, "root", None)
+    if isinstance(root, Body):
+        # A semantic annotation that was inferred but never added to a world
+        # knows its bodies only through its own fields.
+        yield root
+        for value in vars(queried).values():
+            if isinstance(value, Body) and value is not root:
+                yield value
+            elif hasattr(value, "root") and isinstance(value.root, Body):
+                yield value.root
+        return
     try:
         items = iter(queried)
     except TypeError:
