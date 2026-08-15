@@ -7,10 +7,37 @@ This Binder setup uses a notebook-native UI instead of passing `robot`, `action`
 - the JupyterLab extension leaves the simple interface, because the split layout is only
   restored in the multiple document interface
 - the file browser is taken out of the sidebar and the sidebar is collapsed
-- Binder opens `notebooks/demo.ipynb` on the left and the desktop with RViz on the right
+- Binder opens `notebooks/demo.ipynb` on the left and the split panel on the right, which
+  starts on VSCode and switches to the desktop with RViz in one click
 - the JupyterLab extension auto-runs the first code cell
 - that cell calls `run_ui()` from `notebooks/demo_ui.py`
 - the user sees the selector UI directly inside the notebook
+
+## Switching between VSCode and the Desktop
+
+The split panel on the right hosts both VSCode and the remote desktop with RViz. Two
+buttons at the top of the panel switch between them, and the tab name follows the app
+that is showing.
+
+- the panel starts on VSCode, because the tutorial code is read and edited there
+- both apps stay loaded once opened, so switching back keeps the running desktop session
+  and the open editor tabs
+- the desktop is only loaded the first time it is selected, so the startup time of the
+  session does not change
+- `Ctrl/Cmd + Shift + E` toggles between the two apps
+- the command palette has `Show VSCode`, `Show Desktop` and
+  `Switch Between VSCode and Desktop` under the `Demo` category
+- `Open in new tab` on the right of the buttons opens the app that is showing in a
+  browser tab of its own
+
+To start the panel on the desktop instead, use the `startApp` URL parameter:
+
+```text
+...?urlpath=lab/workspaces/new-workspace?startApp=desktop
+```
+
+Accepted values are `vscode` (default) and `desktop`. Unknown values fall back to
+`vscode`.
 
 ## How to disable the startup automation
 
@@ -19,8 +46,9 @@ The JupyterLab extension supports URL flags so other users can opt out without e
 Available flags:
 
 - `autoRunUI=0` disables opening and auto-running `notebooks/demo.ipynb`
-- `autoOpenDesktop=0` disables opening the desktop split panel
+- `autoOpenDesktop=0` disables opening the split panel
 - `autoCollapseLeft=0` keeps the left sidebar open
+- `startApp=desktop` opens the split panel on the desktop instead of VSCode
 - `hideFileBrowser=0` keeps the file browser in the sidebar, if it is enabled at all
 
 Example:

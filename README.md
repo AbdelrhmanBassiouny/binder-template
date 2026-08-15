@@ -39,6 +39,9 @@ https://binder.intel4coro.de/v2/gh/{USER}/{REPO}/{BRANCH}?urlpath={INTERFACE}/{P
   completes code while you type and shows documentation on hover, see
   [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
 - **VSCode** is better if you prefer a full-featured code editor with debugging
+- You do not have to choose up front: inside JupyterLab, the split panel on the right
+  starts on VSCode and switches to the desktop with RViz in one click, see
+  [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
 
 ## Create a new VRB lab from this template
 
