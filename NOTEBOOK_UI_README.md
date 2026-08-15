@@ -9,6 +9,29 @@ This Binder setup uses a notebook-native UI instead of passing `robot`, `action`
 - that cell calls `run_ui()` from `notebooks/demo_ui.py`
 - the user sees the selector UI directly inside the notebook
 
+## Switching between the Desktop and VSCode
+
+The split panel on the right hosts both the remote desktop and VSCode. Two
+buttons at the top of the panel switch between them.
+
+- both apps stay loaded once opened, so switching back keeps the running
+  desktop session and the open editor tabs
+- VSCode is only loaded the first time it is selected, so the startup time of
+  the demo does not change
+- `Ctrl/Cmd + Shift + E` toggles between the two apps
+- the command palette has `Show Desktop`, `Show VSCode` and
+  `Switch Between Desktop and VSCode` under the `Demo` category
+
+To choose which app is shown when the panel opens, use the `startApp` URL
+parameter:
+
+```text
+...?urlpath=lab/workspaces/new-workspace?startApp=vscode
+```
+
+Accepted values are `desktop` (default) and `vscode`. Unknown values fall back
+to `desktop`.
+
 ## How to disable the startup automation
 
 The JupyterLab extension supports URL flags so other users can opt out without editing code.
@@ -18,6 +41,7 @@ Available flags:
 - `autoRunUI=0` disables opening and auto-running `notebooks/demo.ipynb`
 - `autoOpenDesktop=0` disables opening the desktop split panel
 - `autoCollapseLeft=0` keeps the left sidebar open
+- `startApp=vscode` opens the split panel on VSCode instead of the desktop
 
 Example:
 
