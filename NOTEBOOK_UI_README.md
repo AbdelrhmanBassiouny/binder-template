@@ -1,43 +1,52 @@
 # Notebook UI README
 
-This Binder setup uses a notebook-native UI instead of passing `robot`, `action`, or `environment` through the Binder URL.
+A reader who opens the Binder link lands in the tutorial itself. The session shows two
+panels and nothing else: `notebooks/ijcai_demo.ipynb` open in VSCode, and RViz next to it.
 
 ## What happens on startup
 
 - the JupyterLab extension leaves the simple interface, because the split layout is only
   restored in the multiple document interface
 - the file browser is taken out of the sidebar and the sidebar is collapsed
-- Binder opens `notebooks/demo.ipynb` on the left and the split panel on the right, which
-  starts on VSCode and switches to the desktop with RViz in one click
-- the JupyterLab extension auto-runs the first code cell
-- that cell calls `run_ui()` from `notebooks/demo_ui.py`
-- the user sees the selector UI directly inside the notebook
+- VSCode opens on the left with `notebooks/ijcai_demo.ipynb` already open, and the desktop
+  with RViz opens on the right
+- the tutorial panel gets the focus, so the reader starts on the first cell
 
-## Switching between VSCode and the Desktop
+## The two panels of the session
 
-The split panel on the right hosts both VSCode and the remote desktop with RViz. Two
-buttons at the top of the panel switch between them, and the tab name follows the app
-that is showing.
+| Panel | Tab | What it is |
+|-------|-----|------------|
+| left | `Tutorial` | VSCode, served by the `vscode` proxy, with the tutorial notebook open |
+| right | `RViz` | the Xpra desktop, served by the `desktop` proxy, with RViz on it |
 
-- the panel starts on VSCode, because the tutorial code is read and edited there
-- both apps stay loaded once opened, so switching back keeps the running desktop session
-  and the open editor tabs
-- the desktop is only loaded the first time it is selected, so the startup time of the
-  session does not change
-- `Ctrl/Cmd + Shift + E` toggles between the two apps
-- the command palette has `Show VSCode`, `Show Desktop` and
-  `Switch Between VSCode and Desktop` under the `Demo` category
-- `Open in new tab` on the right of the buttons opens the app that is showing in a
-  browser tab of its own
+Both are iframes onto the same session, so the notebook in VSCode and RViz on the desktop
+talk to the same ROS graph.
 
-To start the panel on the desktop instead, use the `startApp` URL parameter:
+`Open in new tab` above each panel opens that app in a browser tab of its own, which is
+the way out if an app ever refuses to be embedded, and a way to give one of them the full
+screen.
+
+VSCode is asked to open the notebook through its URL:
 
 ```text
-...?urlpath=lab/workspaces/new-workspace?startApp=desktop
+{base}/vscode/?folder=/home/repo&payload=[["openFile","vscode-remote:///home/repo/notebooks/ijcai_demo.ipynb"]]
 ```
 
-Accepted values are `vscode` (default) and `desktop`. Unknown values fall back to
-`vscode`.
+The proxy starts code-server with `--ignore-last-opened`, so it never reopens the editors
+of an earlier session and the notebook has to be requested on every launch. To point the
+session at another notebook, change `TUTORIAL_NOTEBOOK` at the top of
+[binder/desktop-widget/src/index.ts](binder/desktop-widget/src/index.ts).
+
+The notebook runs on the Jupyter extension of VSCode, which the base image installs
+together with the Python extension. Its kernels inherit the environment of the Jupyter
+server, so the ROS workspace sourced in [binder/entrypoint.sh](binder/entrypoint.sh) is on
+their path.
+
+## The selector UI is no longer part of the startup
+
+`notebooks/demo.ipynb` and `notebooks/demo_ui.py` are still in the repository and still
+work when opened by hand, but nothing opens them any more: the session starts in the
+tutorial. The sections about the selector below are kept for that reason.
 
 ## How to disable the startup automation
 
@@ -45,17 +54,19 @@ The JupyterLab extension supports URL flags so other users can opt out without e
 
 Available flags:
 
-- `autoRunUI=0` disables opening and auto-running `notebooks/demo.ipynb`
-- `autoOpenDesktop=0` disables opening the split panel
+- `autoOpenVSCode=0` disables opening the tutorial in VSCode
+- `autoOpenDesktop=0` disables opening the desktop with RViz
 - `autoCollapseLeft=0` keeps the left sidebar open
-- `startApp=desktop` opens the split panel on the desktop instead of VSCode
 - `hideFileBrowser=0` keeps the file browser in the sidebar, if it is enabled at all
 
 Example:
 
 ```text
-...?urlpath=lab/workspaces/new-workspace?autoRunUI=0&autoOpenDesktop=0&autoCollapseLeft=0
+...?urlpath=lab/workspaces/new-workspace?autoOpenVSCode=0&autoOpenDesktop=0&autoCollapseLeft=0
 ```
+
+Both panels are also in the command palette under `Demo`, as `Open Tutorial in VSCode`
+and `Open RViz`, so a reader who closes one can bring it back.
 
 The file browser is disabled for good in [binder/Dockerfile](binder/Dockerfile), so
 `hideFileBrowser=0` only brings it back in a setup that does not disable the
@@ -72,6 +83,10 @@ Accepted false-like values are:
 If the flag is missing, the default behavior stays enabled.
 
 ## Editor hints in the notebook
+
+> These settings apply to notebooks opened in JupyterLab. The tutorial itself now opens in
+> VSCode, which brings its own completion and hover documentation through the Python
+> extension, so they no longer affect what the reader of the tutorial sees.
 
 A plain notebook offers no completion until you press `Tab` and no documentation until you
 press `Shift+Tab`, which readers of a tutorial rarely discover. `jupyterlab-lsp` and
@@ -94,9 +109,12 @@ style warnings on every cell, which is noise in a tutorial.
 
 ## Where to edit the UI
 
-- Main UI code: [notebooks/demo_ui.py](/home/hassouna/binder-template/notebooks/demo_ui.py:1)
-- Startup notebook: [notebooks/demo.ipynb](/home/hassouna/binder-template/notebooks/demo.ipynb:1)
-- Auto-run extension: [binder/desktop-widget/src/index.ts](/home/hassouna/binder-template/binder/desktop-widget/src/index.ts:1)
+- Tutorial notebook: [notebooks/ijcai_demo.ipynb](notebooks/ijcai_demo.ipynb)
+- Startup extension, which decides what the session opens:
+  [binder/desktop-widget/src/index.ts](binder/desktop-widget/src/index.ts)
+- Restored layout of the two panels:
+  [new-workspace.jupyterlab-workspace](new-workspace.jupyterlab-workspace)
+- Selector UI, no longer opened at startup: [notebooks/demo_ui.py](notebooks/demo_ui.py)
 
 ## How to add or change buttons
 
@@ -158,4 +176,5 @@ run_ui(on_start=start_demo)
 
 ## Important note
 
-If you add a Markdown cell above the startup code cell, Binder still works because the extension now runs the first code cell automatically.
+Nothing is executed for the reader any more. The tutorial notebook opens in VSCode with
+its cells unrun, so the reader runs them in the order the tutorial explains.

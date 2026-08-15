@@ -10,42 +10,22 @@ import {
   WidgetTracker
 } from '@jupyterlab/apputils';
 import { PageConfig } from '@jupyterlab/coreutils';
-import { IDocumentManager } from '@jupyterlab/docmanager';
-import { NotebookActions, NotebookPanel } from '@jupyterlab/notebook';
-import { Cell } from '@jupyterlab/cells';
 import { Widget } from '@lumino/widgets';
 
-const COMMAND_ID = 'desktop-widget:open';
-const SHOW_DESKTOP_COMMAND_ID = 'desktop-widget:show-desktop';
-const SHOW_VSCODE_COMMAND_ID = 'desktop-widget:show-vscode';
-const SWITCH_COMMAND_ID = 'desktop-widget:switch-app';
-const NAMESPACE = 'desktop-widget';
-const DEFAULT_NOTEBOOK = 'notebooks/demo.ipynb';
+const DESKTOP_COMMAND_ID = 'desktop-widget:open';
+const VSCODE_COMMAND_ID = 'vscode-widget:open';
+const DESKTOP_NAMESPACE = 'desktop-widget';
+const VSCODE_NAMESPACE = 'vscode-widget';
 const FILE_BROWSER_ID = 'filebrowser';
 const PALETTE_CATEGORY = 'Demo';
+
+// The notebook the session is about. Relative to the directory JupyterLab serves.
+const TUTORIAL_NOTEBOOK = 'notebooks/ijcai_demo.ipynb';
 
 // Leaving simple mode makes the shell restore the deferred main area layout in the
 // background, so the widgets opened at startup have to wait for it. There is no signal
 // for the end of that restoration, hence the fixed delay.
 const LAYOUT_RESTORE_DELAY_MS = 300;
-
-type AppId = 'desktop' | 'vscode';
-
-interface IAppDefinition {
-  id: AppId;
-  label: string;
-  title: string;
-  /** Path appended to the JupyterLab base URL. */
-  path: string;
-}
-
-const APPS: IAppDefinition[] = [
-  { id: 'vscode', label: 'VSCode', title: 'VSCode', path: 'vscode/' },
-  { id: 'desktop', label: 'Desktop', title: 'Remote Desktop', path: 'desktop' }
-];
-
-// The tutorial is written in VSCode, so the panel opens there and RViz is one click away.
-const DEFAULT_APP: AppId = 'vscode';
 
 const startupFlag = (name: string, defaultValue = true): boolean => {
   const params = new URLSearchParams(window.location.search);
@@ -58,191 +38,116 @@ const startupFlag = (name: string, defaultValue = true): boolean => {
   return !['0', 'false', 'off', 'no'].includes(normalized);
 };
 
-const startupApp = (name: string, defaultValue: AppId = DEFAULT_APP): AppId => {
-  const params = new URLSearchParams(window.location.search);
-  const raw = params.get(name);
-  if (raw === null) {
-    return defaultValue;
-  }
-
-  const normalized = raw.trim().toLowerCase();
-  const match = APPS.find(app => app.id === normalized);
-  return match ? match.id : defaultValue;
+/**
+ * The directory JupyterLab serves, which is also the folder code-server opens.
+ */
+const serverRoot = (): string => {
+  const root = PageConfig.getOption('serverRoot') || '/home/repo';
+  return root.replace(/\/$/, '');
 };
 
 /**
- * A panel that embeds VSCode and the remote desktop, and switches between them
- * without reloading either one.
+ * The URL of the VSCode proxy, asking it to open the tutorial notebook.
+ *
+ * The proxy starts code-server with `--ignore-last-opened` on the directory in
+ * `CODE_WORKING_DIRECTORY`, so it never reopens the editors of an earlier session and the
+ * notebook has to be requested per session. `payload` is how the web workbench takes that
+ * request; a build that does not understand it still opens the folder, leaving the
+ * notebook one click away in the explorer.
  */
-class DesktopContent extends Widget {
-  constructor(initialApp: AppId = DEFAULT_APP) {
+const vscodeUrl = (): string => {
+  const root = serverRoot();
+  const payload = JSON.stringify([
+    ['openFile', `vscode-remote://${root}/${TUTORIAL_NOTEBOOK}`]
+  ]);
+
+  const query = new URLSearchParams({ folder: root, payload });
+  return `${PageConfig.getBaseUrl()}vscode/?${query.toString()}`;
+};
+
+const desktopUrl = (): string => `${PageConfig.getBaseUrl()}desktop`;
+
+/**
+ * A panel that embeds one of the proxied applications in an iframe.
+ */
+class AppFrame extends Widget {
+  constructor(options: AppFrame.IOptions) {
     super();
     this.addClass('jp-DesktopWidget');
     this.node.style.height = '100%';
     this.node.style.display = 'flex';
     this.node.style.flexDirection = 'column';
 
-    this._switcher = document.createElement('div');
-    this._switcher.className = 'jp-DesktopWidget-switcher';
-    this._switcher.style.display = 'flex';
-    this._switcher.style.flex = '0 0 auto';
-    this._switcher.style.gap = '4px';
-    this._switcher.style.padding = '4px';
-    this._switcher.style.borderBottom =
-      '1px solid var(--jp-border-color2, #ddd)';
-    this._switcher.style.background =
-      'var(--jp-layout-color1, var(--jp-layout-color0, #fff))';
+    // Escape hatch: an app that refuses to be embedded leaves a blank panel, and a live
+    // session should not end there.
+    const header = document.createElement('div');
+    header.className = 'jp-DesktopWidget-header';
+    header.style.display = 'flex';
+    header.style.flex = '0 0 auto';
+    header.style.justifyContent = 'flex-end';
+    header.style.padding = '2px 4px';
 
-    for (const app of APPS) {
-      const button = document.createElement('button');
-      button.className = 'jp-Button jp-DesktopWidget-switcherButton';
-      button.textContent = app.label;
-      button.title = `Show ${app.title}`;
-      button.dataset.appId = app.id;
-      button.style.cursor = 'pointer';
-      button.addEventListener('click', () => this.showApp(app.id));
-      this._switcher.appendChild(button);
-      this._buttons.set(app.id, button);
-    }
-
-    // Escape hatch: some apps refuse to be embedded in an iframe, and a live
-    // demo should not get stuck on a blank panel.
-    this._externalLink = document.createElement('a');
-    this._externalLink.className = 'jp-DesktopWidget-externalLink';
-    this._externalLink.textContent = 'Open in new tab';
-    this._externalLink.target = '_blank';
-    this._externalLink.rel = 'noopener';
-    this._externalLink.style.marginLeft = 'auto';
-    this._externalLink.style.alignSelf = 'center';
-    this._externalLink.style.paddingRight = '4px';
-    this._externalLink.style.fontSize = 'var(--jp-ui-font-size0, 11px)';
-    this._switcher.appendChild(this._externalLink);
-
-    this._frames = document.createElement('div');
-    this._frames.className = 'jp-DesktopWidget-frames';
-    this._frames.style.position = 'relative';
-    this._frames.style.flex = '1 1 auto';
-    this._frames.style.minHeight = '0';
-
-    this.node.appendChild(this._switcher);
-    this.node.appendChild(this._frames);
-
-    this.showApp(initialApp);
-  }
-
-  /**
-   * The application currently visible in the panel.
-   */
-  get currentApp(): AppId {
-    return this._currentApp;
-  }
-
-  /**
-   * Show one of the embedded applications, creating its iframe on first use.
-   *
-   * Iframes are kept alive and only hidden, so switching back keeps the running
-   * desktop session and the open editor tabs.
-   */
-  showApp(appId: AppId): void {
-    const app = APPS.find(candidate => candidate.id === appId);
-    if (!app) {
-      return;
-    }
-
-    this._ensureFrame(app);
-    this._currentApp = app.id;
-
-    this._iframes.forEach((iframe, id) => {
-      iframe.style.display = id === app.id ? 'block' : 'none';
-    });
-
-    this._buttons.forEach((button, id) => {
-      const selected = id === app.id;
-      button.classList.toggle('jp-mod-styled', selected);
-      button.disabled = selected;
-      button.setAttribute('aria-pressed', String(selected));
-    });
-
-    this._externalLink.href = `${PageConfig.getBaseUrl()}${app.path}`;
-    this._externalLink.title = `Open ${app.title} in a new browser tab`;
-
-    this._appChanged();
-  }
-
-  /**
-   * Show the next application in the list, wrapping around at the end.
-   */
-  switchApp(): void {
-    const index = APPS.findIndex(app => app.id === this._currentApp);
-    const next = APPS[(index + 1) % APPS.length];
-    this.showApp(next.id);
-  }
-
-  /**
-   * Called whenever the visible application changes.
-   */
-  onAppChanged: (appId: AppId) => void = () => undefined;
-
-  private _appChanged(): void {
-    try {
-      this.onAppChanged(this._currentApp);
-    } catch (error) {
-      console.error('Failed to notify about the active app', error);
-    }
-  }
-
-  private _ensureFrame(app: IAppDefinition): void {
-    if (this._iframes.has(app.id)) {
-      return;
-    }
+    const externalLink = document.createElement('a');
+    externalLink.className = 'jp-DesktopWidget-externalLink';
+    externalLink.textContent = 'Open in new tab';
+    externalLink.href = options.url;
+    externalLink.target = '_blank';
+    externalLink.rel = 'noopener';
+    externalLink.title = `Open ${options.title} in a new browser tab`;
+    externalLink.style.fontSize = 'var(--jp-ui-font-size0, 11px)';
+    header.appendChild(externalLink);
 
     const iframe = document.createElement('iframe');
-    iframe.className = `jp-DesktopWidget-frame jp-DesktopWidget-frame-${app.id}`;
-    iframe.src = `${PageConfig.getBaseUrl()}${app.path}`;
-    iframe.setAttribute('title', app.title);
+    iframe.className = 'jp-DesktopWidget-frame';
+    iframe.src = options.url;
+    iframe.setAttribute('title', options.title);
     iframe.setAttribute('allow', 'clipboard-read; clipboard-write');
-    iframe.style.position = 'absolute';
-    iframe.style.inset = '0';
+    iframe.style.flex = '1 1 auto';
+    iframe.style.minHeight = '0';
     iframe.style.width = '100%';
-    iframe.style.height = '100%';
     iframe.style.border = '0';
-    iframe.style.display = 'none';
 
-    this._frames.appendChild(iframe);
-    this._iframes.set(app.id, iframe);
+    this.node.appendChild(header);
+    this.node.appendChild(iframe);
   }
+}
 
-  private _currentApp: AppId = DEFAULT_APP;
-  private _switcher: HTMLDivElement;
-  private _externalLink: HTMLAnchorElement;
-  private _frames: HTMLDivElement;
-  private _iframes = new Map<AppId, HTMLIFrameElement>();
-  private _buttons = new Map<AppId, HTMLButtonElement>();
+namespace AppFrame {
+  export interface IOptions {
+    /** Human readable name of the embedded application. */
+    title: string;
+    /** URL the iframe loads. */
+    url: string;
+  }
 }
 
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'desktop-widget:plugin',
   autoStart: true,
-  requires: [ILabShell, ILayoutRestorer, IDocumentManager],
+  requires: [ILabShell, ILayoutRestorer],
   optional: [ICommandPalette],
   activate: (
     app: JupyterFrontEnd,
     labShell: ILabShell,
     restorer: ILayoutRestorer,
-    docManager: IDocumentManager,
     palette: ICommandPalette | null
   ) => {
-    const tracker = new WidgetTracker<MainAreaWidget<DesktopContent>>({
-      namespace: NAMESPACE
+    const desktopTracker = new WidgetTracker<MainAreaWidget<AppFrame>>({
+      namespace: DESKTOP_NAMESPACE
     });
-    let widget: MainAreaWidget<DesktopContent> | null = null;
+    const vscodeTracker = new WidgetTracker<MainAreaWidget<AppFrame>>({
+      namespace: VSCODE_NAMESPACE
+    });
+
+    let desktopWidget: MainAreaWidget<AppFrame> | null = null;
+    let vscodeWidget: MainAreaWidget<AppFrame> | null = null;
 
     const wait = (milliseconds: number) =>
       new Promise<void>(resolve => window.setTimeout(resolve, milliseconds));
 
-    // The workspace stores the notebook and the desktop side by side, but the shell
-    // ignores that layout while it runs in simple mode, which is why the split has to be
-    // restored by hand today.
+    // The workspace stores the two panels side by side, but the shell ignores that layout
+    // while it runs in simple mode, which is why the split has to be restored by hand
+    // today.
     const leaveSimpleMode = async () => {
       if (labShell.mode === 'multiple-document') {
         return;
@@ -262,126 +167,87 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     };
 
-    const titleFor = (appId: AppId): string => {
-      const definition = APPS.find(candidate => candidate.id === appId);
-      return definition ? definition.label : 'Desktop';
+    const openVSCode = async () => {
+      if (vscodeWidget === null || vscodeWidget.isDisposed) {
+        // The workspace restores a panel of its own, and a second one would claim the
+        // same identifier.
+        vscodeWidget = vscodeTracker.find(() => true) ?? null;
+      }
+
+      if (vscodeWidget === null || vscodeWidget.isDisposed) {
+        vscodeWidget = new MainAreaWidget({
+          content: new AppFrame({ title: 'Tutorial', url: vscodeUrl() })
+        });
+        vscodeWidget.id = 'vscode-widget';
+        vscodeWidget.title.label = 'Tutorial';
+        vscodeWidget.title.closable = true;
+        await vscodeTracker.add(vscodeWidget);
+      }
+
+      if (!vscodeWidget.isAttached) {
+        app.shell.add(vscodeWidget, 'main');
+      }
+
+      app.shell.activateById(vscodeWidget.id);
+      return vscodeWidget;
     };
 
-    const openWidget = async (appId?: AppId) => {
-      if (widget === null || widget.isDisposed) {
-        // The workspace restores a desktop widget of its own, and a second one would
-        // claim the same identifier.
-        widget = tracker.find(() => true) ?? null;
+    const openDesktop = async () => {
+      if (desktopWidget === null || desktopWidget.isDisposed) {
+        desktopWidget = desktopTracker.find(() => true) ?? null;
       }
 
-      if (widget === null || widget.isDisposed) {
-        const content = new DesktopContent(appId ?? startupApp('startApp'));
-        widget = new MainAreaWidget({ content });
-        widget.id = 'desktop-widget';
-        widget.title.label = titleFor(content.currentApp);
-        widget.title.closable = true;
-        content.onAppChanged = (current: AppId) => {
-          if (widget && !widget.isDisposed) {
-            widget.title.label = titleFor(current);
-          }
-        };
-        await tracker.add(widget);
-      } else if (appId) {
-        widget.content.showApp(appId);
+      if (desktopWidget === null || desktopWidget.isDisposed) {
+        desktopWidget = new MainAreaWidget({
+          content: new AppFrame({ title: 'RViz', url: desktopUrl() })
+        });
+        desktopWidget.id = 'desktop-widget';
+        desktopWidget.title.label = 'RViz';
+        desktopWidget.title.closable = true;
+        await desktopTracker.add(desktopWidget);
       }
 
-      if (!widget.isAttached) {
-        app.shell.add(widget, 'main', { mode: 'split-right' });
+      if (!desktopWidget.isAttached) {
+        // Anchored on the tutorial so RViz always ends up beside it, never on top of it.
+        const options =
+          vscodeWidget !== null && vscodeWidget.isAttached
+            ? { mode: 'split-right' as const, ref: vscodeWidget.id }
+            : { mode: 'split-right' as const };
+        app.shell.add(desktopWidget, 'main', options);
       }
 
-      app.shell.activateById(widget.id);
-      return widget;
+      app.shell.activateById(desktopWidget.id);
+      return desktopWidget;
     };
 
-    const autoRunNotebookCell = async (panel: NotebookPanel) => {
-      try {
-        await panel.revealed;
-        await panel.context.ready;
-        await panel.sessionContext.ready;
-
-        const firstCodeCellIndex = panel.content.widgets.findIndex(
-          (cell: Cell) => cell.model.type === 'code'
-        );
-
-        if (firstCodeCellIndex === -1) {
-          return;
-        }
-
-        panel.content.activeCellIndex = firstCodeCellIndex;
-        await NotebookActions.run(panel.content, panel.sessionContext);
-      } catch (error) {
-        console.error(
-          `Failed to auto-run the first code cell in ${DEFAULT_NOTEBOOK}`,
-          error
-        );
-      }
-    };
-
-    const openNotebook = async () => {
-      try {
-        const widget = await docManager.openOrReveal(DEFAULT_NOTEBOOK, 'Notebook');
-        if (widget instanceof NotebookPanel) {
-          void autoRunNotebookCell(widget);
-        }
-        return widget;
-      } catch (error) {
-        console.error(`Failed to open ${DEFAULT_NOTEBOOK}`, error);
-        return null;
-      }
-    };
-
-    void restorer.restore(tracker, {
-      command: COMMAND_ID,
+    void restorer.restore(desktopTracker, {
+      command: DESKTOP_COMMAND_ID,
       name: () => 'desktop'
     });
 
-    app.commands.addCommand(COMMAND_ID, {
-      label: 'Open Desktop',
-      execute: () => openWidget()
+    void restorer.restore(vscodeTracker, {
+      command: VSCODE_COMMAND_ID,
+      name: () => 'vscode'
     });
 
-    app.commands.addCommand(SHOW_DESKTOP_COMMAND_ID, {
-      label: 'Show Desktop',
-      execute: () => openWidget('desktop')
+    app.commands.addCommand(DESKTOP_COMMAND_ID, {
+      label: 'Open RViz',
+      execute: () => openDesktop()
     });
 
-    app.commands.addCommand(SHOW_VSCODE_COMMAND_ID, {
-      label: 'Show VSCode',
-      execute: () => openWidget('vscode')
-    });
-
-    app.commands.addCommand(SWITCH_COMMAND_ID, {
-      label: 'Switch Between VSCode and Desktop',
-      execute: async () => {
-        const panel = await openWidget();
-        panel.content.switchApp();
-      }
-    });
-
-    app.commands.addKeyBinding({
-      command: SWITCH_COMMAND_ID,
-      keys: ['Accel Shift E'],
-      selector: 'body'
+    app.commands.addCommand(VSCODE_COMMAND_ID, {
+      label: 'Open Tutorial in VSCode',
+      execute: () => openVSCode()
     });
 
     if (palette) {
-      for (const command of [
-        COMMAND_ID,
-        SHOW_DESKTOP_COMMAND_ID,
-        SHOW_VSCODE_COMMAND_ID,
-        SWITCH_COMMAND_ID
-      ]) {
+      for (const command of [VSCODE_COMMAND_ID, DESKTOP_COMMAND_ID]) {
         palette.addItem({ command, category: PALETTE_CATEGORY });
       }
     }
 
     void app.restored.then(async () => {
-      const autoRun = startupFlag('autoRunUI', true);
+      const autoOpenVSCode = startupFlag('autoOpenVSCode', true);
       const autoOpenDesktop = startupFlag('autoOpenDesktop', true);
       const autoCollapseLeft = startupFlag('autoCollapseLeft', true);
       const hideFileBrowser = startupFlag('hideFileBrowser', true);
@@ -396,12 +262,17 @@ const plugin: JupyterFrontEndPlugin<void> = {
         labShell.collapseLeft();
       }
 
-      if (autoRun) {
-        await openNotebook();
+      if (autoOpenVSCode) {
+        await openVSCode();
       }
 
       if (autoOpenDesktop) {
-        await app.commands.execute(COMMAND_ID);
+        await openDesktop();
+      }
+
+      // The reader starts in the tutorial, with RViz next to it.
+      if (autoOpenVSCode && vscodeWidget !== null && !vscodeWidget.isDisposed) {
+        app.shell.activateById(vscodeWidget.id);
       }
     });
   }

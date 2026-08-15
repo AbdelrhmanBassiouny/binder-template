@@ -3,6 +3,14 @@
 
 [![Binder](https://binder.intel4coro.de/badge_logo.svg)](https://binder.intel4coro.de/v2/gh/IntEL4CoRo/binder-template.git/main?urlpath=lab/workspaces/new-workspace)
 
+## The IJCAI tutorial
+
+[**Start the tutorial**](https://binder.intel4coro.de/v2/gh/AbdelrhmanBassiouny/binder-template.git/ijcai?urlpath=lab/workspaces/new-workspace)
+
+The link opens `notebooks/ijcai_demo.ipynb` in VSCode with RViz beside it, and nothing
+else. See [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md) for what the session opens and
+how to turn any of it off.
+
 ## Introduction
 
 This is a template repository for creating Virtual Research Labs(VRL) as part of the [EASE Virtual Research Building (VRB)](https://vrb.ease-crc.org/) project.
@@ -39,9 +47,8 @@ https://binder.intel4coro.de/v2/gh/{USER}/{REPO}/{BRANCH}?urlpath={INTERFACE}/{P
   completes code while you type and shows documentation on hover, see
   [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
 - **VSCode** is better if you prefer a full-featured code editor with debugging
-- You do not have to choose up front: inside JupyterLab, the split panel on the right
-  starts on VSCode and switches to the desktop with RViz in one click, see
-  [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
+- The tutorial link above needs neither choice: it opens VSCode and RViz side by side
+  inside JupyterLab, see [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
 
 ## Create a new VRB lab from this template
 
