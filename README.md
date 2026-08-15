@@ -7,7 +7,7 @@
 
 [**Start the tutorial**](https://binder.intel4coro.de/v2/gh/AbdelrhmanBassiouny/binder-template.git/ijcai?urlpath=lab/workspaces/new-workspace)
 
-The link opens `notebooks/ijcai_demo.ipynb` in VSCode with RViz beside it, and nothing
+The link opens `notebooks/ijcai_demo.ipynb` in JupyterLab with RViz beside it, and nothing
 else. See [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md) for what the session opens and
 how to turn any of it off.
 
@@ -47,8 +47,8 @@ https://binder.intel4coro.de/v2/gh/{USER}/{REPO}/{BRANCH}?urlpath={INTERFACE}/{P
   completes code while you type and shows documentation on hover, see
   [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
 - **VSCode** is better if you prefer a full-featured code editor with debugging
-- The tutorial link above needs neither choice: it opens VSCode and RViz side by side
-  inside JupyterLab, see [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
+- The tutorial link above needs neither choice: it opens the tutorial notebook and RViz
+  side by side in JupyterLab, see [NOTEBOOK_UI_README.md](NOTEBOOK_UI_README.md)
 
 ## Create a new VRB lab from this template
 

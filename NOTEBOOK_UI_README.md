@@ -1,46 +1,37 @@
 # Notebook UI README
 
 A reader who opens the Binder link lands in the tutorial itself. The session shows two
-panels and nothing else: `notebooks/ijcai_demo.ipynb` open in VSCode, and RViz next to it.
+panels and nothing else: `notebooks/ijcai_demo.ipynb` open in JupyterLab, and RViz next to
+it.
 
 ## What happens on startup
 
 - the JupyterLab extension leaves the simple interface, because the split layout is only
   restored in the multiple document interface
 - the file browser is taken out of the sidebar and the sidebar is collapsed
-- VSCode opens on the left with `notebooks/ijcai_demo.ipynb` already open, and the desktop
-  with RViz opens on the right
-- the tutorial panel gets the focus, so the reader starts on the first cell
+- `notebooks/ijcai_demo.ipynb` opens on the left and the desktop with RViz on the right
+- the notebook gets the focus, so the reader starts on the first cell
 
 ## The two panels of the session
 
 | Panel | Tab | What it is |
 |-------|-----|------------|
-| left | `Tutorial` | VSCode, served by the `vscode` proxy, with the tutorial notebook open |
+| left | `ijcai_demo.ipynb` | the tutorial, in the JupyterLab notebook editor |
 | right | `RViz` | the Xpra desktop, served by the `desktop` proxy, with RViz on it |
 
-Both are iframes onto the same session, so the notebook in VSCode and RViz on the desktop
-talk to the same ROS graph.
+Both live in the same session, so the notebook and RViz talk to the same ROS graph.
 
-`Open in new tab` above each panel opens that app in a browser tab of its own, which is
-the way out if an app ever refuses to be embedded, and a way to give one of them the full
-screen.
+`Open in new tab` above the desktop opens it in a browser tab of its own, which gives RViz
+the full screen and is the way out if the desktop ever refuses to be embedded.
 
-VSCode is asked to open the notebook through its URL:
+To point the session at another notebook, change `TUTORIAL_NOTEBOOK` at the top of
+[binder/desktop-widget/src/index.ts](binder/desktop-widget/src/index.ts) and the path in
+[new-workspace.jupyterlab-workspace](new-workspace.jupyterlab-workspace), which stores the
+layout the two panels are restored into.
 
-```text
-{base}/vscode/?folder=/home/repo&payload=[["openFile","vscode-remote:///home/repo/notebooks/ijcai_demo.ipynb"]]
-```
-
-The proxy starts code-server with `--ignore-last-opened`, so it never reopens the editors
-of an earlier session and the notebook has to be requested on every launch. To point the
-session at another notebook, change `TUTORIAL_NOTEBOOK` at the top of
-[binder/desktop-widget/src/index.ts](binder/desktop-widget/src/index.ts).
-
-The notebook runs on the Jupyter extension of VSCode, which the base image installs
-together with the Python extension. Its kernels inherit the environment of the Jupyter
-server, so the ROS workspace sourced in [binder/entrypoint.sh](binder/entrypoint.sh) is on
-their path.
+No cell is run for the reader. The first cell of the tutorial regenerates the ORM
+interfaces when they are missing, which takes about a minute, so it is left for the reader
+to start along with the rest of the notebook.
 
 ## The selector UI is no longer part of the startup
 
@@ -54,7 +45,7 @@ The JupyterLab extension supports URL flags so other users can opt out without e
 
 Available flags:
 
-- `autoOpenVSCode=0` disables opening the tutorial in VSCode
+- `autoOpenTutorial=0` disables opening `notebooks/ijcai_demo.ipynb`
 - `autoOpenDesktop=0` disables opening the desktop with RViz
 - `autoCollapseLeft=0` keeps the left sidebar open
 - `hideFileBrowser=0` keeps the file browser in the sidebar, if it is enabled at all
@@ -62,10 +53,10 @@ Available flags:
 Example:
 
 ```text
-...?urlpath=lab/workspaces/new-workspace?autoOpenVSCode=0&autoOpenDesktop=0&autoCollapseLeft=0
+...?urlpath=lab/workspaces/new-workspace?autoOpenTutorial=0&autoOpenDesktop=0&autoCollapseLeft=0
 ```
 
-Both panels are also in the command palette under `Demo`, as `Open Tutorial in VSCode`
+Both panels are also in the command palette under `Demo`, as `Open the Tutorial Notebook`
 and `Open RViz`, so a reader who closes one can bring it back.
 
 The file browser is disabled for good in [binder/Dockerfile](binder/Dockerfile), so
@@ -83,10 +74,6 @@ Accepted false-like values are:
 If the flag is missing, the default behavior stays enabled.
 
 ## Editor hints in the notebook
-
-> These settings apply to notebooks opened in JupyterLab. The tutorial itself now opens in
-> VSCode, which brings its own completion and hover documentation through the Python
-> extension, so they no longer affect what the reader of the tutorial sees.
 
 A plain notebook offers no completion until you press `Tab` and no documentation until you
 press `Shift+Tab`, which readers of a tutorial rarely discover. `jupyterlab-lsp` and
@@ -176,5 +163,5 @@ run_ui(on_start=start_demo)
 
 ## Important note
 
-Nothing is executed for the reader any more. The tutorial notebook opens in VSCode with
-its cells unrun, so the reader runs them in the order the tutorial explains.
+Nothing is executed for the reader any more. The tutorial notebook opens with its cells
+unrun, so the reader runs them in the order the tutorial explains.
